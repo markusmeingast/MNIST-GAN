@@ -26,10 +26,10 @@ elif dataset == 'emnist':
 # %% CONSTANTS
 ################################################################################
 
-EPOCHS = 3
+EPOCHS = 100
 BATCH_SIZE = 128
 IMG_SHP = (28, 28, 1)
-LAT_SHP = 90
+LAT_SHP = 100
 
 ################################################################################
 # %% DEFINE DISCRIMINATOR MODEL (FOR TRAINING)
