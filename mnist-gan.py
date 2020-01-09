@@ -10,10 +10,17 @@ import numpy as np
 from tensorflow.keras.models import Sequential, clone_model, Model
 from tensorflow.keras.layers import InputLayer, Conv2D, LeakyReLU, Dropout, Flatten, Dense, Reshape, Conv2DTranspose, Input, concatenate
 from tensorflow.keras.optimizers import Adam
-#from keras.datasets.fashion_mnist import load_data
-#from keras.datasets.mnist import load_data
-from scipy.io import loadmat
 import matplotlib.pyplot as mp
+
+##### WHICH DATA LOADER TO USE
+dataset = 'mnist'
+
+if dataset == 'mnist':
+    from keras.datasets.mnist import load_data
+elif dataset == 'fmnist':
+    from keras.datasets.fashion_mnist import load_data
+elif dataset == 'emnist':
+    from matlab.loader import load_data
 
 ################################################################################
 # %% CONSTANTS
@@ -21,13 +28,11 @@ import matplotlib.pyplot as mp
 
 EPOCHS = 3
 BATCH_SIZE = 128
-BATCHES = 545
 IMG_SHP = (28, 28, 1)
-CAT_SHP = 62 # 10 MNIST/FMNIST
-LAT_SHP = 128
+LAT_SHP = 90
 
 ################################################################################
-# %% BUILD DESCRIMINATOR MODEL (FOR TRAINING)
+# %% DEFINE DISCRIMINATOR MODEL (FOR TRAINING)
 ################################################################################
 
 def build_descriminator(IMG_SHP, CAT_SHP):
@@ -46,8 +51,6 @@ def build_descriminator(IMG_SHP, CAT_SHP):
     model = Model(inputs = input1, outputs = [out1, out2])
     model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
     return model
-
-d_model = build_descriminator(IMG_SHP, CAT_SHP)
 
 ################################################################################
 # %% BUILD GENERATOR MODEL (FOR PREDICTING)
@@ -68,8 +71,6 @@ def build_generator(LAT_SHP, CAT_SHP):
     model = Model(inputs = [input1, input2], outputs = output)
     return model
 
-g_model = build_generator(LAT_SHP, CAT_SHP)
-
 ################################################################################
 # %% COMBINED MODEL (FOR TRAINING GENERATOR)
 ################################################################################
@@ -84,7 +85,9 @@ def build_gan(d_model, g_model):
     model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
     return model
 
-gan_model = build_gan(d_model, g_model)
+################################################################################
+# %% INIT ARRAYS FOR POSTPROCESSING
+################################################################################
 
 loss = []
 
@@ -100,21 +103,37 @@ for epoch in range(EPOCHS):
     # GENERATE REAL DATA
     ############################################################################
 
-    ##### LOAD REAL DATA
-    #(X_train, y_train), (X_test, y_test) = load_data()
-    ##### COMBINE TRAIN AND TEST
-    #X = np.concatenate((X_train, X_test), axis=0)
-    #y = np.concatenate((y_train, y_test), axis=0)
+    ##### LOAD REAL MNIST/FMNIST DATA
+    (X_train, y_train), (X_test, y_test) = load_data()
 
-    data = loadmat('matlab/emnist-byclass.mat')
-    X = data['dataset'][0][0][0][0][0][0]
-    y = data['dataset'][0][0][0][0][0][1]
-    X = X.reshape(-1,28,28).transpose(0,2,1)
+    ##### COMBINE TRAIN AND TEST
+    X = np.concatenate((X_train, X_test), axis=0)
+    y = np.concatenate((y_train, y_test), axis=0)
+
+    """
+    ##### LIMIT TO FIRST CAT_SHP SYMBOLS (TO REDUCE CLASSES FOR TESTING)
+    idx = np.where(y<10)[0]
+    X = X[idx]
+    y = y[idx]
+    """
 
     ##### SHUFFLE DATA
     idx = np.random.permutation(len(X))
     X = X[idx]
     y = y[idx]
+
+    assert y.min() == 0, "Class labels are expected to start at 0"
+
+    ##### CALCULATE NUMBER OF BATCHES
+    BATCHES = int(len(X)/BATCH_SIZE)
+
+    ##### GET NUMBER OF CLASSES
+    CAT_SHP = int(y.max()+1)
+
+    ##### BUILD MODELS
+    d_model = build_descriminator(IMG_SHP, CAT_SHP)
+    g_model = build_generator(LAT_SHP, CAT_SHP)
+    gan_model = build_gan(d_model, g_model)
 
     ################################################################################
     # RUN THROUGH BATCHES
@@ -158,7 +177,7 @@ for epoch in range(EPOCHS):
         z_fake = np.ones((BATCH_SIZE, 1), dtype=int)
 
         ############################################################################
-        # TRAIN DESCRIMINATOR
+        # TRAIN DISCRIMINATOR
         ############################################################################
 
         X_batch = np.concatenate((X_real, X_fake), axis=0)
@@ -189,7 +208,7 @@ for epoch in range(EPOCHS):
         z_gan = np.zeros((2*BATCH_SIZE, 1), dtype=int)
 
         ############################################################################
-        # TRAIN GENERATOR ON DESCRIMINATOR (FIXED) ERROR
+        # TRAIN GENERATOR ON DISCRIMINATOR (FIXED) ERROR
         ############################################################################
 
         ##### GET WEIGHTS FROM LAST TRAINING STEP
@@ -199,4 +218,31 @@ for epoch in range(EPOCHS):
 
         loss.append([d_loss, g_loss])
 
-    print(f'Accuracy: Descriminator {d_acc:.3f} Generator {g_acc:.3f}')
+    print(f'Accuracy: Discriminator {d_acc:.3f} Generator {g_acc:.3f}')
+
+############################################################################
+# %% PLOT LOSS CURVES
+############################################################################
+
+mp.semilogy(loss)
+mp.show()
+
+############################################################################
+# %% SAVE MODELS
+############################################################################
+
+g_model.save('gen_model.h5')
+d_model.save('dis_model.h5')
+gan_model.save('gan_model.h5')
+
+############################################################################
+# %% TEST ON INPUT STRING
+############################################################################
+
+input_string = [0, 1, 2, 3, 4, 5, 6, 7, 8 ,9]
+X_in_p = np.zeros((len(input_string), CAT_SHP))
+X_in_p[np.arange(len(input_string)), input_string] = 1
+X_in_r = np.random.randn(len(input_string), LAT_SHP-CAT_SHP)
+img = g_model.predict([X_in_p, X_in_r])
+out = img.reshape(28, len(input_string)*28)
+mp.imshow(out, cmap='gray_r')
