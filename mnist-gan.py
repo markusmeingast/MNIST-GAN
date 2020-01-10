@@ -10,10 +10,11 @@ import numpy as np
 from tensorflow.keras.models import Sequential, clone_model, Model
 from tensorflow.keras.layers import InputLayer, Conv2D, LeakyReLU, Dropout, Flatten, Dense, Reshape, Conv2DTranspose, Input, concatenate
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.initializers import RandomNormal
 import matplotlib.pyplot as mp
 
 ##### WHICH DATA LOADER TO USE
-dataset = 'mnist'
+dataset = 'emnist'
 
 if dataset == 'mnist':
     from keras.datasets.mnist import load_data
@@ -36,17 +37,20 @@ LAT_SHP = 100
 ################################################################################
 
 def build_descriminator(IMG_SHP, CAT_SHP):
+    ##### KERNEL INIT DISTRIBUTION
+    init = RandomNormal(stddev=0.02)
+    ##### INPUT IMAGE
     input1 = Input(IMG_SHP)
-    layer1 = Conv2D(64, (3,3), strides=(2, 2), padding='same')(input1)
+    layer1 = Conv2D(64, (3,3), strides=(2, 2), padding='same', kernel_initializer=init)(input1)
     layer2 = LeakyReLU(alpha=0.2)(layer1)
     layer3 = Dropout(0.4)(layer2)
-    layer4 = Conv2D(64, (3,3), strides=(2, 2), padding='same')(layer3)
+    layer4 = Conv2D(64, (3,3), strides=(2, 2), padding='same', kernel_initializer=init)(layer3)
     layer5 = LeakyReLU(alpha=0.2)(layer4)
     layer6 = Dropout(0.4)(layer5)
     layer7 = Flatten()(layer6)
-    ##### PREDICT TRUE/FALSE
+    ##### OUTPUT TRUE/FALSE
     out1 = Dense(1, activation='sigmoid')(layer7)
-    ##### PRECIT DIGIT
+    ##### OUTPUT DIGIT ONE-HOT
     out2 = Dense(CAT_SHP, activation='softmax')(layer7)
     model = Model(inputs = input1, outputs = [out1, out2])
     model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
@@ -57,18 +61,24 @@ def build_descriminator(IMG_SHP, CAT_SHP):
 ################################################################################
 
 def build_generator(LAT_SHP, CAT_SHP):
+    ##### KERNEL INIT DISTRIBUTION
+    init = RandomNormal(stddev=0.02)
+    ##### INPUT DIGIT ONE-HOT
     input1 = Input(CAT_SHP)
+    ##### INPUT RANDOM LATENT NOISE
     input2 = Input(LAT_SHP-CAT_SHP)
     inputs = concatenate([input1, input2], axis=-1)
-    layer1 = Dense(7*7*128)(inputs)
+    layer1 = Dense(7*7*128, kernel_initializer=init)(inputs)
     layer2 = LeakyReLU(alpha=0.2)(layer1)
     layer3 = Reshape((7, 7, 128))(layer2)
-    layer4 = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same')(layer3)
+    layer4 = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same', kernel_initializer=init)(layer3)
     layer5 = LeakyReLU(alpha=0.2)(layer4)
-    layer6 = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same')(layer5)
+    layer6 = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same', kernel_initializer=init)(layer5)
     layer7 = LeakyReLU(alpha=0.2)(layer6)
-    output = Conv2D(1, (7,7), activation='sigmoid', padding='same')(layer7)
+    ##### OUTPUT IMAGE
+    output = Conv2D(1, (7,7), activation='sigmoid', padding='same', kernel_initializer=init)(layer7)
     model = Model(inputs = [input1, input2], outputs = output)
+    ##### NO COMPILATION UNTIL COMBINED INTO GAN
     return model
 
 ################################################################################
@@ -224,7 +234,11 @@ for epoch in range(EPOCHS):
 # %% PLOT LOSS CURVES
 ############################################################################
 
-mp.semilogy(loss)
+fig = mp.figure(figsize=(10,8))
+mp.loglog(loss)
+mp.xlabel('batch')
+mp.ylabel('loss')
+mp.legend(['d_loss', 'g_loss'])
 mp.show()
 
 ############################################################################
@@ -239,7 +253,8 @@ gan_model.save('gan_model.h5')
 # %% TEST ON INPUT STRING
 ############################################################################
 
-input_string = [0, 1, 2, 3, 4, 5, 6, 7, 8 ,9]
+fig = mp.figure(figsize=(CAT_SHP, 1))
+input_string = np.arange(CAT_SHP)
 X_in_p = np.zeros((len(input_string), CAT_SHP))
 X_in_p[np.arange(len(input_string)), input_string] = 1
 X_in_r = np.random.randn(len(input_string), LAT_SHP-CAT_SHP)
