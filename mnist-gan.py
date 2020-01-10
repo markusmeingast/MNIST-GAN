@@ -8,7 +8,7 @@
 
 import numpy as np
 from tensorflow.keras.models import Sequential, clone_model, Model
-from tensorflow.keras.layers import InputLayer, Conv2D, LeakyReLU, Dropout, Flatten, Dense, Reshape, Conv2DTranspose, Input, concatenate
+from tensorflow.keras.layers import InputLayer, Conv2D, LeakyReLU, Dropout, Flatten, Dense, Reshape, Conv2DTranspose, Input, concatenate, BatchNormalization
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomNormal
 import matplotlib.pyplot as mp
@@ -27,9 +27,10 @@ elif dataset == 'emnist':
 # %% CONSTANTS
 ################################################################################
 
-EPOCHS = 100
+EPOCHS = 5
 BATCH_SIZE = 128
 IMG_SHP = (28, 28, 1)
+CAT_SHP = 26
 LAT_SHP = 100
 
 ################################################################################
@@ -37,22 +38,64 @@ LAT_SHP = 100
 ################################################################################
 
 def build_descriminator(IMG_SHP, CAT_SHP):
+
+    ##### INPUT IMAGE
+    input = Input(IMG_SHP)
+
+    ##### CONV2D LAYER
+    net = Conv2D(64, (3,3), strides=(2, 2), padding='same')(input)
+    net = LeakyReLU(alpha=0.2)(net)
+    net = Dropout(0.4)(net)
+
+    ##### CONV2D LAYER
+    net = Conv2D(64, (3,3), strides=(2, 2), padding='same')(net)
+    net = LeakyReLU(alpha=0.2)(net)
+    net = Dropout(0.4)(net)
+
+    ##### TO DENSE
+    net = Flatten()(net)
+
+    ##### PREDICT TRUE/FALSE
+    out1 = Dense(1, activation='sigmoid')(net)
+    
+    ##### PRECIT DIGIT
+    out2 = Dense(CAT_SHP, activation='softmax')(net)
+
+    """
     ##### KERNEL INIT DISTRIBUTION
     init = RandomNormal(stddev=0.02)
+
     ##### INPUT IMAGE
-    input1 = Input(IMG_SHP)
-    layer1 = Conv2D(64, (3,3), strides=(2, 2), padding='same', kernel_initializer=init)(input1)
-    layer2 = LeakyReLU(alpha=0.2)(layer1)
-    layer3 = Dropout(0.4)(layer2)
-    layer4 = Conv2D(64, (3,3), strides=(2, 2), padding='same', kernel_initializer=init)(layer3)
-    layer5 = LeakyReLU(alpha=0.2)(layer4)
-    layer6 = Dropout(0.4)(layer5)
-    layer7 = Flatten()(layer6)
+    input = Input(IMG_SHP)
+
+    ##### CONV2D LAYER
+    net = Conv2D(128, (3,3), strides=(1, 1), padding='same', kernel_initializer=init)(input)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### CONV2D LAYER
+    net = Conv2D(128, (4,4), strides=(2, 2), padding='same', kernel_initializer=init)(net)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### CONV2D LAYER
+    net = Conv2D(128, (4,4), strides=(2, 2), padding='same', kernel_initializer=init)(net)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### TO DENSE
+    net = Flatten()(net)
+    net = Dropout(0.4)(net)
+
     ##### OUTPUT TRUE/FALSE
-    out1 = Dense(1, activation='sigmoid')(layer7)
+    out1 = Dense(1, activation='sigmoid')(net)
+
     ##### OUTPUT DIGIT ONE-HOT
-    out2 = Dense(CAT_SHP, activation='softmax')(layer7)
-    model = Model(inputs = input1, outputs = [out1, out2])
+    out2 = Dense(CAT_SHP, activation='softmax')(net)
+    """
+
+    ##### BUILD MODEL AND COMPILE
+    model = Model(inputs = input, outputs = [out1, out2])
     model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
     return model
 
@@ -61,24 +104,85 @@ def build_descriminator(IMG_SHP, CAT_SHP):
 ################################################################################
 
 def build_generator(LAT_SHP, CAT_SHP):
-    ##### KERNEL INIT DISTRIBUTION
-    init = RandomNormal(stddev=0.02)
+
+    """
     ##### INPUT DIGIT ONE-HOT
     input1 = Input(CAT_SHP)
+
     ##### INPUT RANDOM LATENT NOISE
     input2 = Input(LAT_SHP-CAT_SHP)
+
+    ##### COMBINE RANDOM AND ONE-HOT INPUTS
     inputs = concatenate([input1, input2], axis=-1)
-    layer1 = Dense(7*7*128, kernel_initializer=init)(inputs)
-    layer2 = LeakyReLU(alpha=0.2)(layer1)
-    layer3 = Reshape((7, 7, 128))(layer2)
-    layer4 = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same', kernel_initializer=init)(layer3)
-    layer5 = LeakyReLU(alpha=0.2)(layer4)
-    layer6 = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same', kernel_initializer=init)(layer5)
-    layer7 = LeakyReLU(alpha=0.2)(layer6)
+
+    ##### DENSE LAYER
+    net = Dense(7*7*128)(inputs)
+    net = LeakyReLU(alpha=0.2)(net)
+
+    ##### TO CONV2D
+    net = Reshape((7, 7, 128))(net)
+
+    ##### CONV2D.T LAYER
+    net = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same')(net)
+    net = LeakyReLU(alpha=0.2)(net)
+
+    ##### CONV2D.T LAYER
+    net = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same')(net)
+    net = LeakyReLU(alpha=0.2)(net)
+
     ##### OUTPUT IMAGE
-    output = Conv2D(1, (7,7), activation='sigmoid', padding='same', kernel_initializer=init)(layer7)
+    output = Conv2D(1, (7,7), activation='sigmoid', padding='same')(net)
+    """
+
+    ##### KERNEL INIT DISTRIBUTION
+    init = RandomNormal(stddev=0.02)
+
+    ##### INPUT DIGIT ONE-HOT
+    input1 = Input(CAT_SHP)
+
+    ##### INPUT RANDOM LATENT NOISE
+    input2 = Input(LAT_SHP-CAT_SHP)
+
+    ##### COMBINE RANDOM AND ONE-HOT INPUTS
+    inputs = concatenate([input1, input2], axis=-1)
+
+    ##### DENSE LAYER
+    net = Dense(7*7*128, kernel_initializer=init, activation='relu')(inputs)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### TO CONV2D
+    net = Reshape((7, 7, 128))(net)
+    net = Conv2D(128, (5,5), strides=(1, 1), padding='same', kernel_initializer=init)(net)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### CONV2D.T LAYER
+    net = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same', kernel_initializer=init)(net)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### CONV2D.T LAYER
+    net = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same', kernel_initializer=init)(net)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### CONV2D LAYER
+    net = Conv2D(128, (5,5), strides=(1, 1), padding='same', kernel_initializer=init)(net)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### CONV2D LAYER
+    net = Conv2D(128, (5,5), strides=(1, 1), padding='same', kernel_initializer=init)(net)
+    net = BatchNormalization(momentum=0.9)(net)
+    net = LeakyReLU(alpha=0.1)(net)
+
+    ##### OUTPUT IMAGE
+    output = Conv2D(1, (7,7), activation='sigmoid', padding='same', kernel_initializer=init)(net)
+
+    ##### BUILD MODEL (COMPILATION IN GAN MODEL)
     model = Model(inputs = [input1, input2], outputs = output)
-    ##### NO COMPILATION UNTIL COMBINED INTO GAN
+
     return model
 
 ################################################################################
@@ -100,6 +204,14 @@ def build_gan(d_model, g_model):
 ################################################################################
 
 loss = []
+
+################################################################################
+# %% BUILD MODELS
+################################################################################
+
+d_model = build_descriminator(IMG_SHP, CAT_SHP)
+g_model = build_generator(LAT_SHP, CAT_SHP)
+gan_model = build_gan(d_model, g_model)
 
 ################################################################################
 # %% RUN THROUGH EPOCHS
@@ -136,14 +248,6 @@ for epoch in range(EPOCHS):
 
     ##### CALCULATE NUMBER OF BATCHES
     BATCHES = int(len(X)/BATCH_SIZE)
-
-    ##### GET NUMBER OF CLASSES
-    CAT_SHP = int(y.max()+1)
-
-    ##### BUILD MODELS
-    d_model = build_descriminator(IMG_SHP, CAT_SHP)
-    g_model = build_generator(LAT_SHP, CAT_SHP)
-    gan_model = build_gan(d_model, g_model)
 
     ################################################################################
     # RUN THROUGH BATCHES
@@ -224,7 +328,8 @@ for epoch in range(EPOCHS):
         ##### GET WEIGHTS FROM LAST TRAINING STEP
         g_loss, g_acc, _ = gan_model.train_on_batch([X_in_p, X_in_r], [z_gan, y_gan_oh])
 
-        print(f'd_loss: {d_loss:.3f}, g_loss: {g_loss:.3f}')
+        if batch%50==0:
+            print(f'd_loss: {d_loss:.3f}, g_loss: {g_loss:.3f}')
 
         loss.append([d_loss, g_loss])
 

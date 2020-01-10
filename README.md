@@ -62,7 +62,7 @@ The E-MNIST dataset is the original dataset the MNIST-digits set was originally 
 
 ![loss history](img/emnist-loss.png "loss history for 30 epochs")
 
-real data:
+real data (random order):
 ![real data](img/emnist-real.png)
 
 generated data after 5/30/100 epochs:
