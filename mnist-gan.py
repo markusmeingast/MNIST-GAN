@@ -11,10 +11,11 @@ from tensorflow.keras.models import Sequential, clone_model, Model
 from tensorflow.keras.layers import InputLayer, Conv2D, LeakyReLU, Dropout, Flatten, Dense, Reshape, Conv2DTranspose, Input, concatenate, BatchNormalization
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.utils import plot_model
 import matplotlib.pyplot as mp
 
 ##### WHICH DATA LOADER TO USE
-dataset = 'emnist'
+dataset = 'mnist'
 
 if dataset == 'mnist':
     from keras.datasets.mnist import load_data
@@ -27,10 +28,10 @@ elif dataset == 'emnist':
 # %% CONSTANTS
 ################################################################################
 
-EPOCHS = 5
+EPOCHS = 30
 BATCH_SIZE = 128
 IMG_SHP = (28, 28, 1)
-CAT_SHP = 26
+CAT_SHP = 10
 LAT_SHP = 100
 
 ################################################################################
@@ -43,13 +44,13 @@ def build_descriminator(IMG_SHP, CAT_SHP):
     input = Input(IMG_SHP)
 
     ##### CONV2D LAYER
-    net = Conv2D(64, (3,3), strides=(2, 2), padding='same')(input)
-    net = LeakyReLU(alpha=0.2)(net)
+    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(input)
+    net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### CONV2D LAYER
-    net = Conv2D(64, (3,3), strides=(2, 2), padding='same')(net)
-    net = LeakyReLU(alpha=0.2)(net)
+    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### TO DENSE
@@ -57,46 +58,14 @@ def build_descriminator(IMG_SHP, CAT_SHP):
 
     ##### PREDICT TRUE/FALSE
     out1 = Dense(1, activation='sigmoid')(net)
-    
+
     ##### PRECIT DIGIT
     out2 = Dense(CAT_SHP, activation='softmax')(net)
-
-    """
-    ##### KERNEL INIT DISTRIBUTION
-    init = RandomNormal(stddev=0.02)
-
-    ##### INPUT IMAGE
-    input = Input(IMG_SHP)
-
-    ##### CONV2D LAYER
-    net = Conv2D(128, (3,3), strides=(1, 1), padding='same', kernel_initializer=init)(input)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### CONV2D LAYER
-    net = Conv2D(128, (4,4), strides=(2, 2), padding='same', kernel_initializer=init)(net)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### CONV2D LAYER
-    net = Conv2D(128, (4,4), strides=(2, 2), padding='same', kernel_initializer=init)(net)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### TO DENSE
-    net = Flatten()(net)
-    net = Dropout(0.4)(net)
-
-    ##### OUTPUT TRUE/FALSE
-    out1 = Dense(1, activation='sigmoid')(net)
-
-    ##### OUTPUT DIGIT ONE-HOT
-    out2 = Dense(CAT_SHP, activation='softmax')(net)
-    """
 
     ##### BUILD MODEL AND COMPILE
     model = Model(inputs = input, outputs = [out1, out2])
     model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
+
     return model
 
 ################################################################################
@@ -105,7 +74,6 @@ def build_descriminator(IMG_SHP, CAT_SHP):
 
 def build_generator(LAT_SHP, CAT_SHP):
 
-    """
     ##### INPUT DIGIT ONE-HOT
     input1 = Input(CAT_SHP)
 
@@ -116,69 +84,25 @@ def build_generator(LAT_SHP, CAT_SHP):
     inputs = concatenate([input1, input2], axis=-1)
 
     ##### DENSE LAYER
-    net = Dense(7*7*128)(inputs)
-    net = LeakyReLU(alpha=0.2)(net)
+    net = Dense(7*7*64)(inputs)
+    net = LeakyReLU()(net)
+    net = Dropout(0.4)(net)
 
     ##### TO CONV2D
-    net = Reshape((7, 7, 128))(net)
+    net = Reshape((7, 7, 64))(net)
 
     ##### CONV2D.T LAYER
-    net = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same')(net)
-    net = LeakyReLU(alpha=0.2)(net)
+    net = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = LeakyReLU()(net)
+    net = Dropout(0.4)(net)
 
     ##### CONV2D.T LAYER
-    net = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same')(net)
-    net = LeakyReLU(alpha=0.2)(net)
+    net = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = LeakyReLU()(net)
+    net = Dropout(0.4)(net)
 
     ##### OUTPUT IMAGE
-    output = Conv2D(1, (7,7), activation='sigmoid', padding='same')(net)
-    """
-
-    ##### KERNEL INIT DISTRIBUTION
-    init = RandomNormal(stddev=0.02)
-
-    ##### INPUT DIGIT ONE-HOT
-    input1 = Input(CAT_SHP)
-
-    ##### INPUT RANDOM LATENT NOISE
-    input2 = Input(LAT_SHP-CAT_SHP)
-
-    ##### COMBINE RANDOM AND ONE-HOT INPUTS
-    inputs = concatenate([input1, input2], axis=-1)
-
-    ##### DENSE LAYER
-    net = Dense(7*7*128, kernel_initializer=init, activation='relu')(inputs)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### TO CONV2D
-    net = Reshape((7, 7, 128))(net)
-    net = Conv2D(128, (5,5), strides=(1, 1), padding='same', kernel_initializer=init)(net)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### CONV2D.T LAYER
-    net = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same', kernel_initializer=init)(net)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### CONV2D.T LAYER
-    net = Conv2DTranspose(128, (4,4), strides=(2,2), padding='same', kernel_initializer=init)(net)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### CONV2D LAYER
-    net = Conv2D(128, (5,5), strides=(1, 1), padding='same', kernel_initializer=init)(net)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### CONV2D LAYER
-    net = Conv2D(128, (5,5), strides=(1, 1), padding='same', kernel_initializer=init)(net)
-    net = BatchNormalization(momentum=0.9)(net)
-    net = LeakyReLU(alpha=0.1)(net)
-
-    ##### OUTPUT IMAGE
-    output = Conv2D(1, (7,7), activation='sigmoid', padding='same', kernel_initializer=init)(net)
+    output = Conv2D(1, (7, 7), activation='sigmoid', padding='same')(net)
 
     ##### BUILD MODEL (COMPILATION IN GAN MODEL)
     model = Model(inputs = [input1, input2], outputs = output)
@@ -196,7 +120,7 @@ def build_gan(d_model, g_model):
     layer1 = g_model([input1, input2])
     output = d_model(layer1)
     model = Model(inputs = [input1, input2], outputs = output)
-    model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
+    model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(beta_1=0.5))
     return model
 
 ################################################################################
