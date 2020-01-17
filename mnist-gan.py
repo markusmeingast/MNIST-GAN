@@ -8,7 +8,10 @@
 
 import numpy as np
 from tensorflow.keras.models import Sequential, clone_model, Model
-from tensorflow.keras.layers import InputLayer, Conv2D, LeakyReLU, Dropout, Flatten, Dense, Reshape, Conv2DTranspose, Input, concatenate, BatchNormalization
+from tensorflow.keras.layers import InputLayer, Conv2D, LeakyReLU, Dropout
+from tensorflow.keras.layers import Flatten, Dense, Reshape, Conv2DTranspose
+from tensorflow.keras.layers import Input, concatenate, BatchNormalization
+from tensorflow.keras.layers import GaussianNoise
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomNormal
 from tensorflow.keras.utils import plot_model
@@ -35,8 +38,11 @@ def build_descriminator(IMG_SHP, CAT_SHP):
     ##### INPUT IMAGE
     input = Input(IMG_SHP)
 
+    ##### ADD NOISE
+    net = GaussianNoise(0.1)(input)
+
     ##### CONV2D LAYER
-    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(input)
+    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
@@ -151,7 +157,7 @@ for epoch in range(EPOCHS):
     print(f'Epoch: {epoch+1}')
 
     ##### INIT GENERATOR
-    real_gen = generator.image_generator('mnist', BATCH_SIZE, CAT_SHP)
+    real_gen = generator.image_generator(DATASET, BATCH_SIZE, CAT_SHP)
 
     ##### GET NUMBER OF BATCHES
     BATCHES = next(real_gen)
@@ -187,7 +193,7 @@ for epoch in range(EPOCHS):
         ##### SET TARGET TO FAKE
         y_fake_oh = np.zeros((BATCH_SIZE, CAT_SHP), dtype=int)
         y_fake_oh[np.arange(BATCH_SIZE), idx] = 1
-        z_fake = np.ones((BATCH_SIZE, 1), dtype=int)
+        z_fake = 0.9*np.ones((BATCH_SIZE, 1), dtype=int)
 
         ############################################################################
         # TRAIN DISCRIMINATOR

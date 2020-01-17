@@ -125,6 +125,13 @@ generated data after 5/30/50/100 epochs:
 ![50 epochs](img/mnist-50.png "50 epochs of training")
 ![100 epochs](img/mnist-100.png "100 epochs of training")
 
+variance at 5/30/50/100 epochs:
+
+![5 epochs](img/mnist-var-5.png "5 epochs of training")
+![30 epochs](img/mnist-var-30.png "30 epochs of training")
+![50 epochs](img/mnist-var-50.png "50 epochs of training")
+![100 epochs](img/mnist-var-100.png "100 epochs of training")
+
 ## Fashion-MNIST
 
 Zalando-Research provides a dataset that is highly similar in structure to the MNIST-Digit dataset. Instead of 10 classes containg digits, the F-MNIST dataset contains classes of clothing (e.g. boots, shirts, pants, etc.).
@@ -143,6 +150,14 @@ generated data after 5/30/50/100 epochs:
 ![30 epochs](img/fmnist-30.png "30 epochs of training")
 ![50 epochs](img/fmnist-50.png "50 epochs of training")
 ![100 Epochs](img/fmnist-100.png "100 epochs of training")
+
+variance at 5/30/50/100 epochs:
+
+![5 Epochs](img/fmnist-var-5.png "5 epochs of training")
+![30 epochs](img/fmnist-var-30.png "30 epochs of training")
+![50 epochs](img/fmnist-var-50.png "50 epochs of training")
+![100 Epochs](img/fmnist-var-100.png "100 epochs of training")
+
 
 ## Extended-MNIST
 

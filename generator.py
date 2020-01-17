@@ -89,7 +89,7 @@ def image_generator(DATASET='mnist', BATCH_SIZE=128, CAT_SHP=10):
         y_real = y[:BATCH_SIZE]
         y_real_oh = np.zeros((BATCH_SIZE, CAT_SHP), dtype=int)
         y_real_oh[np.arange(BATCH_SIZE), y_real] = 1
-        z_real = np.zeros((BATCH_SIZE, 1), dtype=int)
+        z_real = np.zeros((BATCH_SIZE, 1), dtype=int)+0.1
 
         ##### REMOVE PROCESSED BATCH
         X = np.delete(X, range(BATCH_SIZE), axis=0)
