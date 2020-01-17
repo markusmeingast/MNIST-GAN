@@ -11,8 +11,8 @@ from scipy.io import loadmat
 
 def load_data():
     ##### LOAD REAL EMNIST LETTERS DATA
-    data = loadmat('matlab/emnist-letters.mat')
-    #data = loadmat('drive/My Drive/Data/emnist-letters.mat')
+    data = loadmat('matlab/emnist-byclass.mat')
+    #data = loadmat('drive/My Drive/Data/emnist-byclass.mat')
     X_train = data['dataset'][0][0][0][0][0][0]
     y_train = data['dataset'][0][0][0][0][0][1]
     X_test = data['dataset'][0][0][1][0][0][0]

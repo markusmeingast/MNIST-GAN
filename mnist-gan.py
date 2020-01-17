@@ -15,7 +15,7 @@ from tensorflow.keras.utils import plot_model
 import matplotlib.pyplot as mp
 
 ##### WHICH DATA LOADER TO USE
-dataset = 'mnist'
+dataset = 'emnist'
 
 if dataset == 'mnist':
     from keras.datasets.mnist import load_data
@@ -28,10 +28,10 @@ elif dataset == 'emnist':
 # %% CONSTANTS
 ################################################################################
 
-EPOCHS = 30
+EPOCHS = 5
 BATCH_SIZE = 128
 IMG_SHP = (28, 28, 1)
-CAT_SHP = 10
+CAT_SHP = 62
 LAT_SHP = 100
 
 ################################################################################
@@ -102,7 +102,7 @@ def build_generator(LAT_SHP, CAT_SHP):
     net = Dropout(0.4)(net)
 
     ##### OUTPUT IMAGE
-    output = Conv2D(1, (7, 7), activation='sigmoid', padding='same')(net)
+    output = Conv2D(1, (7, 7), activation='tanh', padding='same')(net)
 
     ##### BUILD MODEL (COMPILATION IN GAN MODEL)
     model = Model(inputs = [input1, input2], outputs = output)
@@ -114,13 +114,26 @@ def build_generator(LAT_SHP, CAT_SHP):
 ################################################################################
 
 def build_gan(d_model, g_model):
+
+    ##### ONLY GENERATOR SHOULD BE TRAINED BASED ON DISCRIMINATOR OUTPUT
     d_model.trainable = False
+
+    ##### NUMBER OF CLASSES TO COVER
     input1 = Input(CAT_SHP)
+
+    ##### FILL REMAINDER WITH RANDOM NOISE
     input2 = Input(LAT_SHP-CAT_SHP)
+
+    ##### PREDICT IMAGE
     layer1 = g_model([input1, input2])
+
+    ##### DISCRIMINATE IMAGE
     output = d_model(layer1)
+
+    ##### BUILD MODEL AND COMPILE
     model = Model(inputs = [input1, input2], outputs = output)
-    model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(beta_1=0.5))
+    model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
+
     return model
 
 ################################################################################
@@ -163,6 +176,24 @@ for epoch in range(EPOCHS):
     y = y[idx]
     """
 
+    minlen = 999999
+    cats = len(np.unique(y))
+
+    for i in range(cats):
+        idx = np.where(y == i)[0]
+        minlen = min(len(idx), minlen)
+
+    X_new = np.zeros((minlen*cats, 28, 28), dtype=int)
+    y_new = np.zeros((minlen*cats,), dtype=int)
+
+    for i in range(cats):
+        idx = np.where(y == i)[0]
+        X_new[i*minlen:(i+1)*minlen] = X[idx[0:minlen]]
+        y_new[i*minlen:(i+1)*minlen] = y[idx[0:minlen]]
+
+    X = X_new
+    y = y_new
+
     ##### SHUFFLE DATA
     idx = np.random.permutation(len(X))
     X = X[idx]
@@ -180,7 +211,7 @@ for epoch in range(EPOCHS):
     for batch in range(BATCHES):
 
         ##### GENERATE REAL BATCH DATA
-        X_real = X[:BATCH_SIZE, :, :, np.newaxis]/255
+        X_real = X[:BATCH_SIZE, :, :, np.newaxis]/127.5-1.0
         y_real = y[:BATCH_SIZE]
         y_real_oh = np.zeros((BATCH_SIZE, CAT_SHP), dtype=int)
         y_real_oh[np.arange(BATCH_SIZE), y_real] = 1
@@ -284,6 +315,7 @@ gan_model.save('gan_model.h5')
 
 fig = mp.figure(figsize=(CAT_SHP, 1))
 input_string = np.arange(CAT_SHP)
+input_string = [0,1,2,10,11,12,36,37,38,39]
 X_in_p = np.zeros((len(input_string), CAT_SHP))
 X_in_p[np.arange(len(input_string)), input_string] = 1
 X_in_r = np.random.randn(len(input_string), LAT_SHP-CAT_SHP)
