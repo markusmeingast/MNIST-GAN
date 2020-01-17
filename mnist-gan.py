@@ -13,21 +13,13 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.initializers import RandomNormal
 from tensorflow.keras.utils import plot_model
 import matplotlib.pyplot as mp
-
-##### WHICH DATA LOADER TO USE
-dataset = 'emnist'
-
-if dataset == 'mnist':
-    from keras.datasets.mnist import load_data
-elif dataset == 'fmnist':
-    from keras.datasets.fashion_mnist import load_data
-elif dataset == 'emnist':
-    from matlab.loader import load_data
+import generator
 
 ################################################################################
 # %% CONSTANTS
 ################################################################################
 
+DATASET = 'mnist'
 EPOCHS = 5
 BATCH_SIZE = 128
 IMG_SHP = (28, 28, 1)
@@ -158,51 +150,11 @@ for epoch in range(EPOCHS):
 
     print(f'Epoch: {epoch+1}')
 
-    ############################################################################
-    # GENERATE REAL DATA
-    ############################################################################
+    ##### INIT GENERATOR
+    real_gen = generator.image_generator('mnist', BATCH_SIZE, CAT_SHP)
 
-    ##### LOAD REAL MNIST/FMNIST DATA
-    (X_train, y_train), (X_test, y_test) = load_data()
-
-    ##### COMBINE TRAIN AND TEST
-    X = np.concatenate((X_train, X_test), axis=0)
-    y = np.concatenate((y_train, y_test), axis=0)
-
-    """
-    ##### LIMIT TO FIRST CAT_SHP SYMBOLS (TO REDUCE CLASSES FOR TESTING)
-    idx = np.where(y<10)[0]
-    X = X[idx]
-    y = y[idx]
-    """
-
-    minlen = 999999
-    cats = len(np.unique(y))
-
-    for i in range(cats):
-        idx = np.where(y == i)[0]
-        minlen = min(len(idx), minlen)
-
-    X_new = np.zeros((minlen*cats, 28, 28), dtype=int)
-    y_new = np.zeros((minlen*cats,), dtype=int)
-
-    for i in range(cats):
-        idx = np.where(y == i)[0]
-        X_new[i*minlen:(i+1)*minlen] = X[idx[0:minlen]]
-        y_new[i*minlen:(i+1)*minlen] = y[idx[0:minlen]]
-
-    X = X_new
-    y = y_new
-
-    ##### SHUFFLE DATA
-    idx = np.random.permutation(len(X))
-    X = X[idx]
-    y = y[idx]
-
-    assert y.min() == 0, "Class labels are expected to start at 0"
-
-    ##### CALCULATE NUMBER OF BATCHES
-    BATCHES = int(len(X)/BATCH_SIZE)
+    ##### GET NUMBER OF BATCHES
+    BATCHES = next(real_gen)
 
     ################################################################################
     # RUN THROUGH BATCHES
@@ -210,16 +162,8 @@ for epoch in range(EPOCHS):
 
     for batch in range(BATCHES):
 
-        ##### GENERATE REAL BATCH DATA
-        X_real = X[:BATCH_SIZE, :, :, np.newaxis]/127.5-1.0
-        y_real = y[:BATCH_SIZE]
-        y_real_oh = np.zeros((BATCH_SIZE, CAT_SHP), dtype=int)
-        y_real_oh[np.arange(BATCH_SIZE), y_real] = 1
-        z_real = np.zeros((BATCH_SIZE, 1), dtype=int)
-
-        ##### REMOVE PROCESSED BATCH
-        X = np.delete(X, range(BATCH_SIZE), axis=0)
-        y = np.delete(y, range(BATCH_SIZE), axis=0)
+        ##### GET NEXT BATCH FROM REAL IMAGE GENERATOR
+        X_real, y_real_oh, z_real = next(real_gen)
 
         ############################################################################
         # GENERATE FAKE DATA
