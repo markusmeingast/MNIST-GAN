@@ -188,10 +188,14 @@ real data (random order):
 ![real data](img/emnist-class-real.png)
 
 generated data after 5/30/50/100 epochs:
-![5 Epochs](img/emnist-class-5.png "5 epochs of training")
+![5 Epochs](img/emnist-5.png "5 epochs of training")
 ![30 epochs](img/emnist-class-30.png "30 epochs of training")
 ![50 epochs](img/emnist-class-50.png "50 epochs of training")
 ![100 Epochs](img/emnist-class-100.png "100 epochs of training")
+
+variance at 100 epochs:
+![100 Epochs](img/emnist-var-100.png "100 epochs of training")
+
 
 ## References/Resources
 

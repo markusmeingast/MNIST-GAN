@@ -22,7 +22,7 @@ import generator
 # %% CONSTANTS
 ################################################################################
 
-DATASET = 'emnist'
+DATASET = 'mnist'
 EPOCHS = 5
 BATCH_SIZE = 128
 IMG_SHP = (28, 28, 1)
@@ -33,26 +33,39 @@ LAT_SHP = 100
 # %% DEFINE DISCRIMINATOR MODEL (FOR TRAINING)
 ################################################################################
 
-def build_descriminator(IMG_SHP, CAT_SHP):
+def build_descriminator(IMG_SHP, CAT_SHP, LAT_SHP):
 
     ##### INPUT IMAGE
-    input = Input(IMG_SHP)
+    input1 = Input(IMG_SHP)
 
     ##### ADD NOISE
-    net = GaussianNoise(0.1)(input)
+    net = GaussianNoise(0.1)(input1)
 
     ##### CONV2D LAYER
-    net = Conv2D(128, (4, 4), strides=(2, 2), padding='same')(net)
+    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### CONV2D LAYER
-    net = Conv2D(128, (4, 4), strides=(2, 2), padding='same')(net)
+    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### TO DENSE
     net = Flatten()(net)
+
+    ##### INPUT LATENT VECTOR
+    input2 = Input(CAT_SHP)
+    input3 = Input(LAT_SHP)
+
+    ##### COMBINE
+    inputs = concatenate([input2, input3], axis=-1)
+    net = concatenate([net, inputs], axis=-1)
+
+    ##### DENSE LAYER
+    net = Dense(64)(net)
+    net = LeakyReLU()(net)
+    net = Dropout(0.4)(net)
 
     ##### PREDICT TRUE/FALSE
     out1 = Dense(1, activation='sigmoid')(net)
@@ -61,7 +74,7 @@ def build_descriminator(IMG_SHP, CAT_SHP):
     out2 = Dense(CAT_SHP, activation='softmax')(net)
 
     ##### BUILD MODEL AND COMPILE
-    model = Model(inputs = input, outputs = [out1, out2])
+    model = Model(inputs = [input1, input2, input3], outputs = [out1, out2])
     model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
 
     return model
@@ -82,20 +95,20 @@ def build_generator(LAT_SHP, CAT_SHP):
     inputs = concatenate([input1, input2], axis=-1)
 
     ##### DENSE LAYER
-    net = Dense(7*7*128)(inputs)
+    net = Dense(7*7*64)(inputs)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### TO CONV2D
-    net = Reshape((7, 7, 128))(net)
+    net = Reshape((7, 7, 64))(net)
 
     ##### CONV2D.T LAYER
-    net = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same')(net)
+    net = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### CONV2D.T LAYER
-    net = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same')(net)
+    net = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
@@ -108,29 +121,68 @@ def build_generator(LAT_SHP, CAT_SHP):
     return model
 
 ################################################################################
+# %% BUILD ENCODER MODEL
+################################################################################
+
+def build_encoder(IMG_SHP, LAT_SHP, CAT_SHP):
+
+    ##### INPUT IMAGE
+    input = Input(IMG_SHP)
+
+    ##### ADD NOISE
+    net = GaussianNoise(0.1)(input)
+
+    ##### CONV2D LAYER
+    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = LeakyReLU()(net)
+    net = Dropout(0.4)(net)
+
+    ##### CONV2D LAYER
+    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = LeakyReLU()(net)
+    net = Dropout(0.4)(net)
+
+    ##### TO DENSE
+    net = Flatten()(net)
+
+    ##### PRECIT NOISE VECTOR
+    out1 = Dense(CAT_SHP)(net)
+    out2 = Dense(LAT_SHP)(net)
+
+    ##### BUILD MODEL (COMPILATION IN GAN MODEL)
+    model = Model(inputs = input, outputs = [out1, out2])
+
+    return model
+
+################################################################################
 # %% COMBINED MODEL (FOR TRAINING GENERATOR)
 ################################################################################
 
-def build_gan(d_model, g_model):
+def build_gan(d_model, g_model, e_model):
 
-    ##### ONLY GENERATOR SHOULD BE TRAINED BASED ON DISCRIMINATOR OUTPUT
+    ##### ONLY GENERATOR/ENCODER SHOULD BE TRAINED BASED ON DISCRIMINATOR OUTPUT
     d_model.trainable = False
 
-    ##### NUMBER OF CLASSES TO COVER
-    input1 = Input(CAT_SHP)
-
-    ##### FILL REMAINDER WITH RANDOM NOISE
-    input2 = Input(LAT_SHP)
+    ##### GENERATOR INPUTS (ONE-HOT AND RANDOM NOISE)
+    g_in1 = Input(CAT_SHP)
+    g_in2 = Input(LAT_SHP)
 
     ##### PREDICT IMAGE
-    layer1 = g_model([input1, input2])
+    g_img  = g_model([g_in1, g_in2])
+
+    ##### ENCODER INPUT
+    e_img = Input(IMG_SHP)
+
+    ##### PREDICT LATENT VECTORS
+    e_ou1, e_ou2 = e_model(e_img)
 
     ##### DISCRIMINATE IMAGE
-    output = d_model(layer1)
+    d_out1 = d_model([g_img, g_in1, g_in2])
+    d_out2 = d_model([e_img, e_ou1, e_ou2])
 
     ##### BUILD MODEL AND COMPILE
-    model = Model(inputs = [input1, input2], outputs = output)
-    model.compile(loss=['binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
+    model = Model(inputs = [g_in1, g_in2, e_img], outputs = [d_out1, d_out2])
+    model.compile(loss=['binary_crossentropy', 'categorical_crossentropy', 'binary_crossentropy', 'categorical_crossentropy'], optimizer=Adam(lr=0.0002, beta_1=0.5))
 
     return model
 
@@ -144,9 +196,10 @@ loss = []
 # %% BUILD MODELS
 ################################################################################
 
-d_model = build_descriminator(IMG_SHP, CAT_SHP)
+d_model = build_descriminator(IMG_SHP, CAT_SHP, LAT_SHP)
 g_model = build_generator(LAT_SHP, CAT_SHP)
-gan_model = build_gan(d_model, g_model)
+e_model = build_encoder(IMG_SHP, LAT_SHP, CAT_SHP)
+gan_model = build_gan(d_model, g_model, e_model)
 
 ################################################################################
 # %% RUN THROUGH EPOCHS
@@ -168,27 +221,34 @@ for epoch in range(EPOCHS):
 
     for batch in range(BATCHES):
 
+        ############################################################################
+        # ENCODER: PREDICT LATENT VECTOR FROM REAL IMAGE
+        ############################################################################
+
         ##### GET NEXT BATCH FROM REAL IMAGE GENERATOR
         X_real, y_real_oh, z_real = next(real_gen)
 
+        ##### PREDICT RANDOM OUTPUT FROM IMAGE
+        w_real_p, w_real_r = e_model.predict(X_real)
+
         ############################################################################
-        # GENERATE FAKE DATA
+        # GENERATOR: GENERATE FAKE DATA
         ############################################################################
 
         ##### GENERATE RANDOM DIGITS
         idx = np.random.randint(0, high=CAT_SHP, size=BATCH_SIZE, dtype='int')
 
         ##### INIT EMPTY INPUT ARRAY
-        X_in_p = np.zeros((BATCH_SIZE, CAT_SHP), dtype=float)
+        w_fake_p = np.zeros((BATCH_SIZE, CAT_SHP), dtype=float)
 
         ##### ONE HOT DIGITS TO INPUT
-        X_in_p[np.arange(BATCH_SIZE), idx] = 1
+        w_fake_p[np.arange(BATCH_SIZE), idx] = 1
 
         ##### FILL REST WITH RANDOM NUMBERS
-        X_in_r = np.random.randn(BATCH_SIZE, LAT_SHP)
+        w_fake_r = np.random.randn(BATCH_SIZE, LAT_SHP)
 
         ##### PREDICT IMAGE FROM RANDOM INPUT
-        X_fake = g_model.predict([X_in_p, X_in_r])
+        X_fake = g_model.predict([w_fake_p, w_fake_r])
 
         ##### SET TARGET TO FAKE
         y_fake_oh = np.zeros((BATCH_SIZE, CAT_SHP), dtype=int)
@@ -200,11 +260,14 @@ for epoch in range(EPOCHS):
         ############################################################################
 
         X_batch = np.concatenate((X_real, X_fake), axis=0)
+        w_batch_p = np.concatenate((w_real_p, w_fake_p), axis=0)
+        w_batch_r = np.concatenate((w_real_r, w_fake_r), axis=0)
         y_batch = np.concatenate((y_real_oh, y_fake_oh), axis=0)
         z_batch = np.concatenate((z_real, z_fake), axis=0)
 
-        d_loss, d_acc, _ = d_model.train_on_batch(X_batch, [z_batch, y_batch])
+        d_loss, d_acc, _ = d_model.train_on_batch([X_batch, w_batch_p, w_batch_r], [z_batch, y_batch])
 
+        """
         ############################################################################
         # GENERATE RANDOM/PARAMETERIZED GENERATOR INPUT
         ############################################################################
@@ -213,28 +276,29 @@ for epoch in range(EPOCHS):
         idx = np.random.randint(0, high=CAT_SHP, size=2*BATCH_SIZE, dtype='int')
 
         ##### INIT EMPTY INPUT AND TARGET ARRAYS
-        X_in_p = np.zeros((2*BATCH_SIZE, CAT_SHP), dtype=float)
+        w_gan_p = np.zeros((2*BATCH_SIZE, CAT_SHP), dtype=float)
 
         ##### ONE HOT DIGITS TO INPUT AND OUTPUT
-        X_in_p[np.arange(2*BATCH_SIZE), idx] = 1
+        w_gan_p[np.arange(2*BATCH_SIZE), idx] = 1
 
         ##### FILL REST WITH RANDOM NUMBERS
-        X_in_r = np.random.randn(2*BATCH_SIZE, LAT_SHP)
+        w_gan_r = np.random.randn(2*BATCH_SIZE, LAT_SHP)
 
         ##### BUILD OUTPUT ARRAY
         y_gan_oh = np.zeros((2*BATCH_SIZE, CAT_SHP), dtype=int)
         y_gan_oh[np.arange(2*BATCH_SIZE), idx] = 1
         z_gan = np.zeros((2*BATCH_SIZE, 1), dtype=int)
+        """
 
         ############################################################################
         # TRAIN GENERATOR ON DISCRIMINATOR (FIXED) ERROR
         ############################################################################
 
         ##### GET WEIGHTS FROM LAST TRAINING STEP
-        g_loss, g_acc, _ = gan_model.train_on_batch([X_in_p, X_in_r], [z_gan, y_gan_oh])
+        gan_loss, g_acc, g_loss, e_acc, e_loss = gan_model.train_on_batch([w_fake_p, w_fake_r, X_real], [z_real, y_fake_oh, z_fake, y_real_oh])
 
         if batch%50==0:
-            print(f'd_loss: {d_loss:.3f}, g_loss: {g_loss:.3f}')
+            print(f'd_loss: {d_loss:.3f}, g_loss: {g_loss:.3f}, e_loss: {e_loss:.3f}')
 
         loss.append([d_loss, g_loss])
 
@@ -248,7 +312,7 @@ fig = mp.figure(figsize=(10,8))
 mp.loglog(loss)
 mp.xlabel('batch')
 mp.ylabel('loss')
-mp.legend(['d_loss', 'g_loss'])
+mp.legend(['d_loss', 'g_loss', 'e_loss'])
 mp.show()
 
 ############################################################################
