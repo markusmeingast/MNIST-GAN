@@ -10,7 +10,7 @@ import numpy as np
 
 from keras.datasets.mnist import load_data as load_data_mnist
 from keras.datasets.fashion_mnist import load_data as load_data_fmnist
-from matlab.loader import load_data as load_data_emnist
+from emnist_loader import load_data as load_data_emnist
 
 def image_generator(DATASET='mnist', BATCH_SIZE=128, CAT_SHP=10):
 
@@ -89,7 +89,7 @@ def image_generator(DATASET='mnist', BATCH_SIZE=128, CAT_SHP=10):
         y_real = y[:BATCH_SIZE]
         y_real_oh = np.zeros((BATCH_SIZE, CAT_SHP), dtype=int)
         y_real_oh[np.arange(BATCH_SIZE), y_real] = 1
-        z_real = np.zeros((BATCH_SIZE, 1), dtype=int)+0.1
+        z_real = 0.1*np.ones((BATCH_SIZE, 1), dtype=int)
 
         ##### REMOVE PROCESSED BATCH
         X = np.delete(X, range(BATCH_SIZE), axis=0)

@@ -22,7 +22,7 @@ import generator
 # %% CONSTANTS
 ################################################################################
 
-DATASET = 'mnist'
+DATASET = 'emnist'
 EPOCHS = 5
 BATCH_SIZE = 128
 IMG_SHP = (28, 28, 1)
@@ -42,12 +42,12 @@ def build_descriminator(IMG_SHP, CAT_SHP):
     net = GaussianNoise(0.1)(input)
 
     ##### CONV2D LAYER
-    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = Conv2D(128, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### CONV2D LAYER
-    net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = Conv2D(128, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
@@ -76,26 +76,26 @@ def build_generator(LAT_SHP, CAT_SHP):
     input1 = Input(CAT_SHP)
 
     ##### INPUT RANDOM LATENT NOISE
-    input2 = Input(LAT_SHP-CAT_SHP)
+    input2 = Input(LAT_SHP)
 
     ##### COMBINE RANDOM AND ONE-HOT INPUTS
     inputs = concatenate([input1, input2], axis=-1)
 
     ##### DENSE LAYER
-    net = Dense(7*7*64)(inputs)
+    net = Dense(7*7*128)(inputs)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### TO CONV2D
-    net = Reshape((7, 7, 64))(net)
+    net = Reshape((7, 7, 128))(net)
 
     ##### CONV2D.T LAYER
-    net = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
     ##### CONV2D.T LAYER
-    net = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(net)
+    net = Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same')(net)
     net = LeakyReLU()(net)
     net = Dropout(0.4)(net)
 
@@ -120,7 +120,7 @@ def build_gan(d_model, g_model):
     input1 = Input(CAT_SHP)
 
     ##### FILL REMAINDER WITH RANDOM NOISE
-    input2 = Input(LAT_SHP-CAT_SHP)
+    input2 = Input(LAT_SHP)
 
     ##### PREDICT IMAGE
     layer1 = g_model([input1, input2])
@@ -182,10 +182,10 @@ for epoch in range(EPOCHS):
         X_in_p = np.zeros((BATCH_SIZE, CAT_SHP), dtype=float)
 
         ##### ONE HOT DIGITS TO INPUT
-        X_in_p[np.arange(BATCH_SIZE), idx] = 1.0
+        X_in_p[np.arange(BATCH_SIZE), idx] = 1
 
         ##### FILL REST WITH RANDOM NUMBERS
-        X_in_r = np.random.randn(BATCH_SIZE, LAT_SHP-CAT_SHP)
+        X_in_r = np.random.randn(BATCH_SIZE, LAT_SHP)
 
         ##### PREDICT IMAGE FROM RANDOM INPUT
         X_fake = g_model.predict([X_in_p, X_in_r])
@@ -216,10 +216,10 @@ for epoch in range(EPOCHS):
         X_in_p = np.zeros((2*BATCH_SIZE, CAT_SHP), dtype=float)
 
         ##### ONE HOT DIGITS TO INPUT AND OUTPUT
-        X_in_p[np.arange(2*BATCH_SIZE), idx] = 1.0
+        X_in_p[np.arange(2*BATCH_SIZE), idx] = 1
 
         ##### FILL REST WITH RANDOM NUMBERS
-        X_in_r = np.random.randn(2*BATCH_SIZE, LAT_SHP-CAT_SHP)
+        X_in_r = np.random.randn(2*BATCH_SIZE, LAT_SHP)
 
         ##### BUILD OUTPUT ARRAY
         y_gan_oh = np.zeros((2*BATCH_SIZE, CAT_SHP), dtype=int)

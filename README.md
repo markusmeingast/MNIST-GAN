@@ -27,7 +27,7 @@ The models utilize LeakyReLU activation functions and a dropout of 40% per CNN l
 
 More implemented features:
 1. A `tanh` activation is used in the last step of the generator
-1. Label smoothing is applied (0.9 for real, -0.9 for fake)
+1. Label smoothing is applied (0.9 for fake, 0.1 for real)
 
 Generator Model      | Discriminator Model
 :-------------------:|:-------------------:
@@ -112,25 +112,22 @@ MNIST dataset. The data contains balanced 70.000 samples of hand-written digits
 that can be used as a basis for CNN classification methods. The data is widely
 available and requires no noteworthy cleaning or preprocessing to be worked with.
 
-![loss history](img/mnist-loss.png "loss history for 30 epochs")
+![loss history](img/mnist-loss.png "loss history for 100 epochs")
 
 real data:
 
 ![real data](img/mnist-real.png)
 
-generated data after 5/30/50/100 epochs:
+generated data after 5/15/45/100 epochs:
 
 ![5 epochs](img/mnist-5.png "5 epochs of training")
-![30 epochs](img/mnist-30.png "30 epochs of training")
-![50 epochs](img/mnist-50.png "50 epochs of training")
+![15 epochs](img/mnist-15.png "15 epochs of training")
+![45 epochs](img/mnist-45.png "45 epochs of training")
 ![100 epochs](img/mnist-100.png "100 epochs of training")
 
-variance at 5/30/50/100 epochs:
+variance at 100 epochs:
 
-![5 epochs](img/mnist-var-5.png "5 epochs of training")
-![30 epochs](img/mnist-var-30.png "30 epochs of training")
-![50 epochs](img/mnist-var-50.png "50 epochs of training")
-![100 epochs](img/mnist-var-100.png "100 epochs of training")
+![variance](img/mnist-var-100.png "variance after 100 epochs")
 
 ## Fashion-MNIST
 
@@ -144,20 +141,19 @@ real data:
 
 ![real data](img/fmnist-real.png)
 
-generated data after 5/30/50/100 epochs:
+generated data after 5/15/45/100 epochs:
 
 ![5 Epochs](img/fmnist-5.png "5 epochs of training")
-![30 epochs](img/fmnist-30.png "30 epochs of training")
-![50 epochs](img/fmnist-50.png "50 epochs of training")
+![15 epochs](img/fmnist-15.png "15 epochs of training")
+![45 epochs](img/fmnist-45.png "45 epochs of training")
 ![100 Epochs](img/fmnist-100.png "100 epochs of training")
 
-variance at 5/30/50/100 epochs:
+variance 100 epochs:
 
-![5 Epochs](img/fmnist-var-5.png "5 epochs of training")
-![30 epochs](img/fmnist-var-30.png "30 epochs of training")
-![50 epochs](img/fmnist-var-50.png "50 epochs of training")
 ![100 Epochs](img/fmnist-var-100.png "100 epochs of training")
 
+
+# TODO  
 
 ## Extended-MNIST
 
