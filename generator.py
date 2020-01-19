@@ -73,7 +73,9 @@ def image_generator(DATASET='mnist', BATCH_SIZE=128, CAT_SHP=10):
     X = X[idx]
     y = y[idx]
 
+    ##### TESTING
     assert y.min() == 0, "Class labels are expected to start at 0"
+    assert X.shape[1:] == (28, 28), f"Expecting images of shape 28 x 28 x 1, got {X.shape[1:]}"
 
     ##### CALCULATE NUMBER OF BATCHES
     BATCHES = int(len(X)/BATCH_SIZE)
@@ -89,10 +91,10 @@ def image_generator(DATASET='mnist', BATCH_SIZE=128, CAT_SHP=10):
         y_real = y[:BATCH_SIZE]
         y_real_oh = np.zeros((BATCH_SIZE, CAT_SHP), dtype=int)
         y_real_oh[np.arange(BATCH_SIZE), y_real] = 1
-        z_real = 0.1*np.ones((BATCH_SIZE, 1), dtype=int)
+        w_real = np.ones((BATCH_SIZE, 1), dtype=int)
 
         ##### REMOVE PROCESSED BATCH
         X = np.delete(X, range(BATCH_SIZE), axis=0)
         y = np.delete(y, range(BATCH_SIZE), axis=0)
 
-        yield X_real, y_real_oh, z_real
+        yield X_real, y_real_oh, w_real
