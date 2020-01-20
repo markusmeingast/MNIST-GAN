@@ -19,9 +19,8 @@ w     real/fake classification
 * Images normalized to [-1,1] (tanh)
 * GaussianNoise is added to input images (stddev = 0.05)
 
-* binary-binary_crossentropy is used for binary classification, i.e. real or fake images
-* categorical_crossentropy is used for one-hot encoded classification of images
-
+* binary-crossentropy is used for binary classification, i.e. real or fake images
+* categorical-crossentropy is used for one-hot encoded classification of images
 * autoencoder uses MAE (MSE creates slightly blurry images)
 
 * Generator, discriminator and encoder to use LeakyReLU and Dropout (BatchNormalization causes issues in convergence and mode collapse)
