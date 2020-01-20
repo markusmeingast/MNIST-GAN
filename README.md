@@ -33,8 +33,8 @@ Learning curve:
 
 Auto-encoder performance (5, 10, 15 epochs):
 
-![epoch autoencoder 5](img/mnist-ae-5.png)
-![epoch autoencoder 10](img/mnist-ae-10.png)
+![epoch autoencoder 5](img/mnist-ae-5.png)\
+![epoch autoencoder 10](img/mnist-ae-10.png)\
 ![epoch autoencoder 15](img/mnist-ae-15.png)
 
 Generator variablibity (5, 10, 15 epochs):
@@ -49,6 +49,31 @@ Generator performance:
 ![epoch generator 10](img/mnist-gen-10.png)
 ![epoch generator 15](img/mnist-gen-15.png)
 
+# Fashion-MNIST dataset
+
+Learning curve:
+
+![FMNIST loss](img/fmnist-loss.png)
+
+Auto-encoder performance (5, 10, 15 epochs):
+
+![epoch autoencoder 5](img/fmnist-ae-5.png)\
+![epoch autoencoder 10](img/fmnist-ae-10.png)\
+![epoch autoencoder 15](img/fmnist-ae-15.png)\
+
+Generator variablibity (5, 10, 15 epochs):
+
+![epoch generator 5](img/fmnist-gen-var-5.png)
+![epoch generator 10](img/fmnist-gen-var-10.png)
+![epoch generator 15](img/fmnist-gen-var-15.png)
+
+Generator performance:
+
+![epoch generator 5](img/fmnist-gen-5.png)
+![epoch generator 10](img/fmnist-gen-10.png)
+![epoch generator 15](img/fmnist-gen-15.png)
+
+
 # EMNIST dataset
 
 The model (128 depth) has some issues getting started. Some initialization configurations may speed up model convergence. After ~10 epochs (~1100 batches per epoch), no significant improvement in image quality is seen.
@@ -59,9 +84,9 @@ Learning curve:
 
 Auto-encoder performance (5, 10, 15 epochs):
 
-![epoch autoencoder 5](img/emnist-ae-5.png)
-![epoch autoencoder 10](img/emnist-ae-10.png)
-![epoch autoencoder 15](img/emnist-ae-15.png)
+![epoch autoencoder 5](img/emnist-ae-5.png)\
+![epoch autoencoder 10](img/emnist-ae-10.png)\
+![epoch autoencoder 15](img/emnist-ae-15.png)\
 
 Generator variablibity (5, 10, 15 epochs):
 
