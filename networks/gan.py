@@ -21,6 +21,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.layers import Input, GaussianNoise, Conv2D, Dense, Flatten
 from tensorflow.keras.layers import BatchNormalization, LeakyReLU, Reshape
 from tensorflow.keras.layers import Conv2DTranspose, concatenate, Dropout
+from tensorflow.keras.initializers import RandomNormal
 
 from tensorflow.keras.utils import plot_model
 
@@ -30,7 +31,7 @@ from tensorflow.keras.utils import plot_model
 
 class AEACGAN():
 
-    def __init__(self, IMG_SHP=(28, 28, 1), CLS_SHP=10, LNV_SHP=100):
+    def __init__(self, IMG_SHP=(28, 28, 1), CLS_SHP=10, LNV_SHP=100, depth=64):
 
         ##### IMAGE SHAPE
         self.IMG_SHP = (28, 28, 1)
@@ -40,6 +41,12 @@ class AEACGAN():
 
         ##### LENGTH OF LATENT NOISE VECTOR
         self.LNV_SHP = LNV_SHP
+
+        ##### DEPTH OF CONV LAYERS
+        self.depth = depth
+
+        ##### KERNEL INIT
+        self.init = RandomNormal(stddev=0.02)
 
     def  __repr__(self):
         ...
@@ -60,13 +67,13 @@ class AEACGAN():
         net = GaussianNoise(0.05)(X_in)
 
         ##### CONV2D LAYER WITH STRIDE 2
-        net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+        net = Conv2D(self.depth, (4, 4), strides=(2, 2), padding='same', kernel_initializer=self.init)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
 
         ##### CONV2D LAYER WITH STRIDE 2
-        net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+        net = Conv2D(self.depth, (4, 4), strides=(2, 2), padding='same', kernel_initializer=self.init)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
@@ -75,7 +82,7 @@ class AEACGAN():
         net = Flatten()(net)
 
         ##### DENSE LAYER
-        net = Dense(64)(net)
+        net = Dense(self.depth)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
@@ -109,28 +116,28 @@ class AEACGAN():
         net = concatenate([y_in, z_in], axis=-1)
 
         ##### DENSE LAYER
-        net = Dense(7*7*64)(net)
+        net = Dense(7*7*self.depth)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
 
         ##### TO CONV2D
-        net = Reshape((7, 7, 64))(net)
+        net = Reshape((7, 7, self.depth))(net)
 
         ##### CONV2D TRANSPOSE WITH STRIDE 2
-        net = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(net)
+        net = Conv2DTranspose(self.depth, (4, 4), strides=(2, 2), padding='same', kernel_initializer=self.init)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
 
         ##### CONV2D TRANSPOSE WITH STRIDE 2
-        net = Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(net)
+        net = Conv2DTranspose(self.depth, (4, 4), strides=(2, 2), padding='same', kernel_initializer=self.init)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
 
         ##### OUTPUT IMAGE
-        X_out = Conv2D(1, (7, 7), activation='tanh', padding='same')(net)
+        X_out = Conv2D(1, (7, 7), activation='tanh', padding='same', kernel_initializer=self.init)(net)
 
         ##### BUILD AND RETURN MODEL
         model = Model(inputs = [y_in, z_in], outputs = X_out)
@@ -152,13 +159,13 @@ class AEACGAN():
         net = GaussianNoise(0.05)(X_in)
 
         ##### CONV2D LAYER WITH STRIDE 2
-        net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+        net = Conv2D(self.depth, (4, 4), strides=(2, 2), padding='same', kernel_initializer=self.init)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
 
         ##### CONV2D LAYER WITH STRIDE 2
-        net = Conv2D(64, (4, 4), strides=(2, 2), padding='same')(net)
+        net = Conv2D(self.depth, (4, 4), strides=(2, 2), padding='same', kernel_initializer=self.init)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
@@ -167,7 +174,7 @@ class AEACGAN():
         net = Flatten()(net)
 
         ##### DENSE LAYER
-        net = Dense(64)(net)
+        net = Dense(self.depth)(net)
         #net = BatchNormalization()(net)
         net = LeakyReLU()(net)
         net = Dropout(0.4)(net)
@@ -202,7 +209,7 @@ class AEACGAN():
 
         ##### BUILD, COMPILE AND RETURN MODEL
         model = Model(inputs = X_in, outputs = X_out)
-        model.compile(loss='mean_squared_error', optimizer=Adam(lr=0.0002, beta_1=0.5))
+        model.compile(loss='mean_absolute_error', optimizer=Adam(lr=0.0002, beta_1=0.5))
         return model
 
     def build_acgan(self, g_model, d_model):
