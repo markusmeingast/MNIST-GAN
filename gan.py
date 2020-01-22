@@ -2,6 +2,7 @@
 
 
 # PARAMETERS:
+  * IMG_SHP        - shape of image in pixels and channels
   * CLS_SHP        - number of classes to predict
   * LNV_SHP        - length of latent noise vector
 
@@ -34,7 +35,7 @@ class AEACGAN():
     def __init__(self, IMG_SHP=(28, 28, 1), CLS_SHP=10, LNV_SHP=100, depth=64):
 
         ##### IMAGE SHAPE
-        self.IMG_SHP = (28, 28, 1)
+        self.IMG_SHP = IMG_SHP
 
         ##### NUMBER OF CLASSES TO PREDICT
         self.CLS_SHP = CLS_SHP
@@ -46,7 +47,7 @@ class AEACGAN():
         self.depth = depth
 
         ##### KERNEL INIT
-        self.init = RandomNormal(stddev=0.02)
+        self.init = RandomNormal(stddev=0.01)
 
     def  __repr__(self):
         ...
