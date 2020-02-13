@@ -1,4 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TensorFlow](https://img.shields.io/static/v1?label=TensorFlow&message=2.0&color=orange)](https://www.tensorflow.org/)
+[![Python](https://img.shields.io/static/v1?label=Python&message=3.7.5&color=green)](https://www.python.org/downloads/release/python-375/)
 
 # E/F/MNIST - GAN
 
@@ -15,13 +17,12 @@ code documented here is considered a proof of concept only.
 
 A classical GAN model learns to generate images that look realistic by playing
 two specialized neural networks against each other. A generator takes a latent
-noise vector (with no explicit meaning) as input and tries to produce a
+noise vector (at this stage with no explicit meaning) as input and tries to produce a
 realistic image. The second neural network tries to discriminate if a given
 image is from the real dataset, or produced by the generator. In theory both
 networks, by trying to outsmart each other, continuously improve them-selves.
 
-The classical GAN network would produce a random image that is indistinguishable
-from images of the original dataset. In order to allow for a control of the output,
+The classical GAN network would produce a random image that resembles an image from original dataset. In order to allow for a control of the output,
 a auxiliary classifier is implemented: The generator takes the latent noise vector,
 as well as a intended class (one-hot-encoded) input, and the discriminator tries
 to determine the "fakeness" of the image, as well as it's class. Therefore two
